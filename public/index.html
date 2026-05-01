@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OpsBoard Enterprise</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{background:linear-gradient(135deg,#020617,#0f172a,#1e3a8a);color:#fff;min-height:100vh}
+.container{width:92%;max-width:1300px;margin:auto;padding:25px 0}
+.nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px}
+.logo{font-size:32px;font-weight:900}
+.logo span{color:#38bdf8}
+.card{background:rgba(2,6,23,.9);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:22px;margin-bottom:20px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
+.stat{background:#111827;padding:18px;border-radius:15px}
+.stat h2{color:#38bdf8;font-size:34px}
+input,select,textarea{width:100%;padding:12px;margin:7px 0;border-radius:10px;border:1px solid #334155;background:#020617;color:white}
+textarea{min-height:80px}
+button{padding:11px 15px;border:0;border-radius:10px;font-weight:bold;cursor:pointer;background:#38bdf8;color:#020617;margin-top:8px}
+.red{background:#ef4444;color:white}
+.green{background:#22c55e;color:#020617}
+.hidden{display:none}
+.item{background:#111827;border:1px solid #334155;border-radius:14px;padding:15px;margin-top:12px}
+.badge{display:inline-block;padding:5px 9px;border-radius:20px;background:#1e293b;color:#93c5fd;margin:4px 4px 4px 0;font-size:12px}
+.high,.critical{background:#7f1d1d;color:#fecaca}
+.medium{background:#78350f;color:#fde68a}
+.low{background:#14532d;color:#bbf7d0}
+.tabs{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.tab{background:#111827;color:white;border:1px solid #334155}
+.tab.active{background:#38bdf8;color:#020617}
+.section{display:none}
+.section.active{display:block}
+pre{white-space:pre-wrap;color:#cbd5e1}
+@media(max-width:900px){.grid,.stats{grid-template-columns:1fr}.nav{flex-direction:column;gap:15px}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="nav">
+    <div class="logo">Ops<span>Board</span> Enterprise</div>
+    <button id="logoutBtn" class="red hidden" onclick="logout()">Logout</button>
+  </div>
+
+  <section id="authBox" class="grid">
+    <div class="card">
+      <h1>Enterprise DevOps Operations Platform</h1>
+      <br>
+      <p>
+        Production-style dashboard for managing projects, operational tasks,
+        incidents, deployments, metrics and audit logs.
+      </p>
+      <br>
+      <p>
+        Built with Node.js, MongoDB, Redis, Docker Compose and Nginx.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Create Account</h2>
+      <input id="regName" placeholder="Name">
+      <input id="regEmail" placeholder="Email">
+      <input id="regPass" type="password" placeholder="Password">
+      <button onclick="register()">Register</button>
+
+      <hr style="border-color:#334155;margin:25px 0">
+
+      <h2>Login</h2>
+      <input id="loginEmail" placeholder="Email">
+      <input id="loginPass" type="password" placeholder="Password">
+      <button class="green" onclick="login()">Login</button>
+
+      <p id="authMsg" style="margin-top:15px;color:#93c5fd"></p>
+    </div>
+  </section>
+
+  <section id="appBox" class="hidden">
+
+    <div class="card">
+      <h2 id="welcomeText">Welcome</h2>
+      <p>Role: <span id="roleText"></span></p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showSection('dashboard')">Dashboard</button>
+      <button class="tab" onclick="showSection('projects')">Projects</button>
+      <button class="tab" onclick="showSection('tasks')">Tasks</button>
+      <button class="tab" onclick="showSection('incidents')">Incidents</button>
+      <button class="tab" onclick="showSection('deployments')">Deployments</button>
+      <button class="tab" onclick="showSection('logs')">Audit Logs</button>
+      <button class="tab" onclick="showSection('system')">System</button>
+    </div>
+
+    <div id="dashboard" class="section active">
+      <div class="stats">
+        <div class="stat"><p>Projects</p><h2 id="sProjects">0</h2></div>
+        <div class="stat"><p>Tasks</p><h2 id="sTasks">0</h2></div>
+        <div class="stat"><p>Incidents</p><h2 id="sIncidents">0</h2></div>
+        <div class="stat"><p>Deployments</p><h2 id="sDeployments">0</h2></div>
+      </div>
+    </div>
+
+    <div id="projects" class="section">
+      <div class="grid">
+        <div class="card">
+          <h2>Create Project</h2>
+          <input id="projectName" placeholder="Project name">
+          <textarea id="projectDesc" placeholder="Description"></textarea>
+          <select id="projectEnv">
+            <option value="development">development</option>
+            <option value="staging">staging</option>
+            <option value="production">production</option>
+          </select>
+          <button onclick="createProject()">Create Project</button>
+        </div>
+        <div class="card">
+          <h2>Projects List</h2>
+          <button onclick="loadProjects()">Refresh</button>
+          <div id="projectsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tasks" class="section">
+      <div class="grid">
+        <div class="card">
+          <h2>Create Task</h2>
+          <input id="taskTitle" placeholder="Task title">
+          <textarea id="taskDesc" placeholder="Description"></textarea>
+          <select id="taskPriority">
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
+            <option value="critical">critical</option>
+          </select>
+          <button onclick="createTask()">Create Task</button>
+        </div>
+        <div class="card">
+          <h2>Tasks List</h2>
+          <button onclick="loadTasks()">Refresh</button>
+          <div id="tasksList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="incidents" class="section">
+      <div class="grid">
+        <div class="card">
+          <h2>Report Incident</h2>
+          <input id="incidentTitle" placeholder="Incident title">
+          <input id="incidentService" placeholder="Affected service">
+          <textarea id="incidentDetails" placeholder="Details"></textarea>
+          <select id="incidentSeverity">
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
+            <option value="critical">critical</option>
+          </select>
+          <button onclick="createIncident()">Report Incident</button>
+        </div>
+        <div class="card">
+          <h2>Incidents List</h2>
+          <button onclick="loadIncidents()">Refresh</button>
+          <div id="incidentsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="deployments" class="section">
+      <div class="grid">
+        <div class="card">
+          <h2>Create Deployment</h2>
+          <input id="deployApp" placeholder="Application name">
+          <input id="deployVersion" placeholder="Version e.g. v1.0.0">
+          <select id="deployEnv">
+            <option value="development">development</option>
+            <option value="staging">staging</option>
+            <option value="production">production</option>
+          </select>
+          <select id="deployStatus">
+            <option value="success">success</option>
+            <option value="running">running</option>
+            <option value="failed">failed</option>
+          </select>
+          <button onclick="createDeployment()">Create Deployment</button>
+        </div>
+        <div class="card">
+          <h2>Deployments List</h2>
+          <button onclick="loadDeployments()">Refresh</button>
+          <div id="deploymentsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="logs" class="section">
+      <div class="card">
+        <h2>Audit Logs</h2>
+        <button onclick="loadLogs()">Refresh Logs</button>
+        <div id="logsList"></div>
+      </div>
+    </div>
+
+    <div id="system" class="section">
+      <div class="grid">
+        <div class="card">
+          <h2>Health Check</h2>
+          <button onclick="loadHealth()">Check Health</button>
+          <pre id="healthBox"></pre>
+        </div>
+        <div class="card">
+          <h2>Metrics</h2>
+          <button onclick="loadMetrics()">Load Metrics</button>
+          <pre id="metricsBox"></pre>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</div>
+
+<script>
+let token = localStorage.getItem("ops_token");
+let user = JSON.parse(localStorage.getItem("ops_user") || "null");
+
+function headers(){
+  return {
+    "Content-Type":"application/json",
+    "Authorization":"Bearer " + token
+  };
+}
+
+function init(){
+  if(token && user){
+    authBox.classList.add("hidden");
+    appBox.classList.remove("hidden");
+    logoutBtn.classList.remove("hidden");
+    welcomeText.innerText = "Welcome, " + user.name;
+    roleText.innerText = user.role;
+    loadAll();
+  }
+}
+
+function showSection(id){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  event.target.classList.add("active");
+}
+
+async function register(){
+  const res = await fetch("/api/auth/register",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      name:regName.value,
+      email:regEmail.value,
+      password:regPass.value
+    })
+  });
+  const data = await res.json();
+  authMsg.innerText = data.message || "Done";
+}
+
+async function login(){
+  const res = await fetch("/api/auth/login",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      email:loginEmail.value,
+      password:loginPass.value
+    })
+  });
+
+  const data = await res.json();
+
+  if(res.ok){
+    localStorage.setItem("ops_token",data.token);
+    localStorage.setItem("ops_user",JSON.stringify(data.user));
+    location.reload();
+  }else{
+    authMsg.innerText = data.message || "Login failed";
+  }
+}
+
+function logout(){
+  localStorage.removeItem("ops_token");
+  localStorage.removeItem("ops_user");
+  location.reload();
+}
+
+async function loadDashboard(){
+  const res = await fetch("/api/dashboard",{headers:headers()});
+  const result = await res.json();
+  const d = result.data || {};
+  sProjects.innerText = d.projects || 0;
+  sTasks.innerText = d.tasks || 0;
+  sIncidents.innerText = d.incidents || 0;
+  sDeployments.innerText = d.deployments || 0;
+}
+
+async function createProject(){
+  await fetch("/api/projects",{
+    method:"POST",
+    headers:headers(),
+    body:JSON.stringify({
+      name:projectName.value,
+      description:projectDesc.value,
+      environment:projectEnv.value
+    })
+  });
+  projectName.value="";
+  projectDesc.value="";
+  loadAll();
+}
+
+async function loadProjects(){
+  const res = await fetch("/api/projects",{headers:headers()});
+  const data = await res.json();
+  projectsList.innerHTML = data.map(p=>`
+    <div class="item">
+      <h3>${p.name}</h3>
+      <p>${p.description || "No description"}</p>
+      <span class="badge">${p.environment}</span>
+      <span class="badge">${p.status}</span>
+    </div>
+  `).join("");
+}
+
+async function createTask(){
+  await fetch("/api/tasks",{
+    method:"POST",
+    headers:headers(),
+    body:JSON.stringify({
+      title:taskTitle.value,
+      description:taskDesc.value,
+      priority:taskPriority.value
+    })
+  });
+  taskTitle.value="";
+  taskDesc.value="";
+  loadAll();
+}
+
+async function loadTasks(){
+  const res = await fetch("/api/tasks",{headers:headers()});
+  const data = await res.json();
+  tasksList.innerHTML = data.map(t=>`
+    <div class="item">
+      <h3>${t.title}</h3>
+      <p>${t.description || "No description"}</p>
+      <span class="badge ${t.priority}">${t.priority}</span>
+      <span class="badge">${t.status}</span>
+      <br>
+      <button onclick="updateTask('${t._id}','in-progress')">Progress</button>
+      <button class="green" onclick="updateTask('${t._id}','done')">Done</button>
+      <button class="red" onclick="deleteTask('${t._id}')">Delete</button>
+    </div>
+  `).join("");
+}
+
+async function updateTask(id,status){
+  await fetch("/api/tasks/"+id,{
+    method:"PATCH",
+    headers:headers(),
+    body:JSON.stringify({status})
+  });
+  loadAll();
+}
+
+async function deleteTask(id){
+  await fetch("/api/tasks/"+id,{
+    method:"DELETE",
+    headers:headers()
+  });
+  loadAll();
+}
+
+async function createIncident(){
+  await fetch("/api/incidents",{
+    method:"POST",
+    headers:headers(),
+    body:JSON.stringify({
+      title:incidentTitle.value,
+      service:incidentService.value,
+      details:incidentDetails.value,
+      severity:incidentSeverity.value
+    })
+  });
+  incidentTitle.value="";
+  incidentService.value="";
+  incidentDetails.value="";
+  loadAll();
+}
+
+async function loadIncidents(){
+  const res = await fetch("/api/incidents",{headers:headers()});
+  const data = await res.json();
+  incidentsList.innerHTML = data.map(i=>`
+    <div class="item">
+      <h3>${i.title}</h3>
+      <p>${i.details || "No details"}</p>
+      <span class="badge">${i.service}</span>
+      <span class="badge ${i.severity}">${i.severity}</span>
+      <span class="badge">${i.status}</span>
+      <br>
+      <button onclick="updateIncident('${i._id}','investigating')">Investigating</button>
+      <button class="green" onclick="updateIncident('${i._id}','resolved')">Resolved</button>
+    </div>
+  `).join("");
+}
+
+async function updateIncident(id,status){
+  await fetch("/api/incidents/"+id,{
+    method:"PATCH",
+    headers:headers(),
+    body:JSON.stringify({status})
+  });
+  loadAll();
+}
+
+async function createDeployment(){
+  await fetch("/api/deployments",{
+    method:"POST",
+    headers:headers(),
+    body:JSON.stringify({
+      appName:deployApp.value,
+      version:deployVersion.value,
+      environment:deployEnv.value,
+      status:deployStatus.value
+    })
+  });
+  deployApp.value="";
+  deployVersion.value="";
+  loadAll();
+}
+
+async function loadDeployments(){
+  const res = await fetch("/api/deployments",{headers:headers()});
+  const data = await res.json();
+  deploymentsList.innerHTML = data.map(d=>`
+    <div class="item">
+      <h3>${d.appName}</h3>
+      <span class="badge">${d.version}</span>
+      <span class="badge">${d.environment}</span>
+      <span class="badge">${d.status}</span>
+    </div>
+  `).join("");
+}
+
+async function loadLogs(){
+  const res = await fetch("/api/audit-logs",{headers:headers()});
+  const data = await res.json();
+  logsList.innerHTML = data.map(l=>`
+    <div class="item">
+      <strong>${l.action}</strong> on <strong>${l.resource}</strong>
+      <p>${l.user}</p>
+      <span class="badge">${new Date(l.createdAt).toLocaleString()}</span>
+    </div>
+  `).join("");
+}
+
+async function loadHealth(){
+  const res = await fetch("/health");
+  healthBox.innerText = JSON.stringify(await res.json(),null,2);
+}
+
+async function loadMetrics(){
+  const res = await fetch("/metrics");
+  metricsBox.innerText = JSON.stringify(await res.json(),null,2);
+}
+
+function loadAll(){
+  loadDashboard();
+  loadProjects();
+  loadTasks();
+  loadIncidents();
+  loadDeployments();
+  loadLogs();
+}
+
+init();
+</script>
+
+</body>
+</html>

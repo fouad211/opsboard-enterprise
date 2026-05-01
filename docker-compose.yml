@@ -1,0 +1,36 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: opsboard-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: opsboard-app
+    env_file:
+      - .env
+    depends_on:
+      - mongo
+      - redis
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    container_name: opsboard-mongo
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: opsboard-redis
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
