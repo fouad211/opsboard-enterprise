@@ -9,7 +9,7 @@ env:
   IMAGE_NAME: ghcr.io/fouad211/opsboard-enterprise
 
 jobs:
-  build-test-security-push:
+  build-test-security-push-update-gitops:
     runs-on: ubuntu-latest
 
     permissions:
@@ -59,3 +59,17 @@ jobs:
         run: |
           docker push $IMAGE_NAME:${{ github.sha }}
           docker push $IMAGE_NAME:latest
+
+      - name: Update GitOps image tag
+        run: |
+          git clone https://${{ secrets.GHCR_USERNAME }}:${{ secrets.GHCR_TOKEN }}@github.com/fouad211/devops-gitops.git
+          cd devops-gitops
+
+          sed -i "s/tag:.*/tag: ${{ github.sha }}/" opsboard-enterprise/helm/values-dev.yaml
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add opsboard-enterprise/helm/values-dev.yaml
+          git commit -m "Update OpsBoard image tag to ${{ github.sha }}" || echo "No changes to commit"
+          git push
